@@ -7,6 +7,7 @@
 // ============================================================
 
 import express from 'express';
+import cors from 'cors';
 import dotenv from 'dotenv';
 import sequelize from './config/database';
 import authRoutes from './routes/authRoutes';
@@ -24,8 +25,18 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // ── Middlewares globales ──────────────────────────────────────
-// express.json() permite leer el body de las peticiones en formato JSON.
-// Sin esto, req.body sería undefined.
+const allowedOrigins = (process.env.CORS_ORIGINS ?? 'http://localhost:4200').split(',');
+app.use(cors({
+  origin: (origin, callback) => {
+    // Permitir requests sin origin (ej. Postman, curl) y los origins configurados
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 // ── Rutas ─────────────────────────────────────────────────────
