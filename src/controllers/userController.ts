@@ -182,9 +182,31 @@ export const deleteUser = async (req: AuthRequest, res: Response): Promise<void>
   try {
     const { id } = req.params;
 
-    const user = await User.findByPk(id);
+    if (req.user!.id === Number(id)) {
+      res.status(403).json({ message: 'No puedes eliminar tu propia cuenta' });
+      return;
+    }
+
+    const user = await User.findByPk(id, {
+      include: [{ model: Role, as: 'role', attributes: ['name'] }],
+    });
     if (!user) {
       res.status(404).json({ message: 'Usuario no encontrado' });
+      return;
+    }
+
+    const targetRoleName = (user as any).role?.name;
+
+    // Superuser no puede ser eliminado por nadie
+    if (targetRoleName === 'superuser') {
+      res.status(403).json({ message: 'El superusuario no puede ser eliminado' });
+      return;
+    }
+
+    // Admin solo puede eliminar usuarios con rol 'user'
+    // Superuser puede eliminar cualquier rol (excepto superuser, validado arriba)
+    if (req.user!.roleName === 'admin' && targetRoleName !== 'user') {
+      res.status(403).json({ message: 'Un admin solo puede eliminar usuarios con rol user' });
       return;
     }
 
